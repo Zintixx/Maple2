@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Collections;
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Maple2.Model.Enum;
 using Maple2.Model.Game;
 using Maple2.Model.Metadata;
@@ -23,7 +25,7 @@ public class BuffManager : IUpdatable {
     #endregion
     private readonly IActor actor;
     // TODO: Change this to support multiple buffs of the same id, different casters. Possibly also different levels?
-    public ConcurrentDictionary<int, Buff> Buffs { get; } = new();
+    private ConcurrentDictionary<int, ConcurrentDictionary<int, IList<Buff>>> buffs { get; } = new();
     public IDictionary<InvokeEffectType, IDictionary<int, InvokeRecord>> Invokes { get; init; }
     public IDictionary<CompulsionEventType, IDictionary<int, AdditionalEffectMetadataStatus.CompulsionEvent>> Compulsions { get; init; }
     private Dictionary<BasicAttribute, float> Resistances { get; } = new();
@@ -90,7 +92,7 @@ public class BuffManager : IUpdatable {
 
         // TODO: Implement AdditionalEffectMetadata.CasterIndividualBuff.
         // If true, each caster will have their own buff added to the same Actor.
-        if (Buffs.TryGetValue(id, out Buff? existing)) {
+        if (TryGet().TryGetValue(id, out Buff? existing)) {
             if (level > existing.Level) {
 
             }
@@ -105,7 +107,7 @@ public class BuffManager : IUpdatable {
 
         // Remove existing buff if it's in the same group
         if (additionalEffect.Property.Group > 0) {
-            existing = Buffs.Values.FirstOrDefault(buff => buff.Metadata.Property.Group == additionalEffect.Property.Group);
+            existing = buffSimplieDictionary.Values.FirstOrDefault(buff => buff.Metadata.Property.Group == additionalEffect.Property.Group);
             if (existing != null) {
                 existing.Disable();
                 owner.Field.Broadcast(BuffPacket.Remove(existing));
@@ -114,8 +116,8 @@ public class BuffManager : IUpdatable {
 
 
         var buff = new Buff(owner.Field, additionalEffect, NextLocalId(), caster, owner);
-        if (!Buffs.TryAdd(id, buff)) {
-            Buffs[id].Stack();
+        if (!buffSimplieDictionary.TryAdd(id, buff)) {
+            buffSimplieDictionary[id].Stack();
             owner.Field.Broadcast(BuffPacket.Update(buff));
             return;
         }
@@ -160,7 +162,7 @@ public class BuffManager : IUpdatable {
         }
 
         // Does this get overwritten if a new reflect is applied?
-        var record = new ReflectRecord(buff.Id, buff.Metadata.Reflect);
+        var record = new ReflectRecord(buff.ObjectId, buff.Metadata.Reflect);
         Reflect = record;
     }
 
@@ -270,7 +272,7 @@ public class BuffManager : IUpdatable {
 
     private void CancelBuffs(Buff buff, AdditionalEffectMetadataUpdate.CancelEffect cancel) {
         foreach (int cancelId in cancel.Ids) {
-            if (Buffs.TryGetValue(cancelId, out Buff? cancelBuff)) {
+            if (buffSimplieDictionary.TryGetValue(cancelId, out Buff? cancelBuff)) {
                 if (cancel.CheckSameCaster) {
                     if (cancelBuff.Caster != buff.Caster) {
                         continue;
@@ -282,7 +284,7 @@ public class BuffManager : IUpdatable {
         }
 
         foreach (BuffCategory category in cancel.Categories) {
-            foreach (Buff cancelCategoryBuff in Buffs.Values) {
+            foreach (Buff cancelCategoryBuff in buffSimplieDictionary.Values) {
                 if (cancelCategoryBuff.Metadata.Property.Category == category) {
                     Remove(cancelCategoryBuff.Id);
                 }
@@ -291,7 +293,7 @@ public class BuffManager : IUpdatable {
     }
 
     public virtual void Update(long tickCount) {
-        foreach (Buff buff in Buffs.Values) {
+        foreach (Buff buff in buffSimplieDictionary.Values) {
             buff.Update(tickCount);
         }
     }
@@ -300,7 +302,7 @@ public class BuffManager : IUpdatable {
         foreach (MapEntranceBuff buff in actor.Field.Metadata.EntranceBuffs) {
             Remove(buff.Id);
         }
-        foreach (Buff buff in Buffs.Values) {
+        foreach (Buff buff in buffSimplieDictionary.Values) {
             if (buff.Metadata.Property.RemoveOnLeaveField) {
                 Remove(buff.Id);
             }
@@ -313,7 +315,7 @@ public class BuffManager : IUpdatable {
         }
 
         if (actor.Field.Metadata.Property.Type == MapType.Pvp) {
-            foreach (Buff buff in Buffs.Values) {
+            foreach (Buff buff in buffSimplieDictionary.Values) {
                 if (buff.Metadata.Property.RemoveOnPvpZone) {
                     Remove(buff.Id);
                 }
@@ -342,48 +344,120 @@ public class BuffManager : IUpdatable {
         }
     }
 
-    public bool Remove(int id) {
-        //TODO: Check if buff is removable/should be removed
-        if (!Buffs.Remove(id, out Buff? buff)) {
+    /// <summary>
+    /// Removes all buffs from caster with the specified buff ID.
+    /// </summary>
+    public bool Remove(IActor caster, int id) {
+        if (!TryGet(caster, id, out IList<Buff>? buffList)) {
             return false;
         }
 
-        if (Reflect?.SourceBuffId == id) {
-            Reflect = null;
+        foreach (Buff buff in buffList) {
+            //Remove(buff.Id);
         }
 
-        foreach ((BasicAttribute attribute, float value) in buff.Metadata.Status.Resistances) {
-            Resistances[attribute] = Math.Min(0, Resistances[attribute] - value);
+        return true;
+    }
+    /// <summary>
+    /// Removes all buffs with the specified buff ID.
+    /// </summary>
+    public bool Remove(int id) {
+        //TODO: Check if buff is removable/should be removed
+        if (!TryGet(id, out IList<Buff>? buffList)) {
+            return false;
         }
-
-        Invokes.RemoveAll(id);
-        Compulsions.RemoveAll(id);
-
-        if (buff.Metadata.Status.Values.Count > 0 || buff.Metadata.Status.Rates.Count > 0 || buff.Metadata.Status.SpecialValues.Count > 0 || buff.Metadata.Status.SpecialRates.Count > 0) {
-            if (actor is FieldPlayer player) {
-                player.Session.Stats.Refresh();
+        foreach (Buff buff in buffList) {
+            buffList.Remove(buff);
+            if (Reflect?.SourceBuffObjectId == buff.ObjectId) {
+                Reflect = null;
             }
+
+            foreach ((BasicAttribute attribute, float value) in buff.Metadata.Status.Resistances) {
+                Resistances[attribute] = Math.Min(0, Resistances[attribute] - value);
+            }
+
+            Invokes.RemoveAll(id);
+            Compulsions.RemoveAll(id);
+
+            if (buff.Metadata.Status.Values.Count > 0 || buff.Metadata.Status.Rates.Count > 0 || buff.Metadata.Status.SpecialValues.Count > 0 || buff.Metadata.Status.SpecialRates.Count > 0) {
+                if (actor is FieldPlayer player) {
+                    player.Session.Stats.Refresh();
+                }
+            }
+
+            actor.Field.Broadcast(BuffPacket.Remove(buff));
         }
 
-        actor.Field.Broadcast(BuffPacket.Remove(buff));
         return true;
     }
 
+    private bool RemoveInternal(Buff buff) {
+
+    }
+
     public void OnDeath() {
-        foreach (Buff buff in Buffs.Values) {
-            if (!buff.Metadata.Property.KeepOnDeath) {
+        foreach (ConcurrentDictionary<int, IList<Buff>> casterDict in buffs.Values) {
+            foreach (Buff buff in casterDict.Values.SelectMany(buffEntry => buffEntry)) {
+                if (buff.Metadata.Property.KeepOnDeath) {
+                    break;
+                }
                 Remove(buff.Id);
             }
         }
     }
 
     private bool CheckImmunity(int newBuffId, BuffCategory category) {
-        foreach ((int id, Buff buff) in Buffs) {
-            if (buff.Metadata.Update.ImmuneIds.Contains(newBuffId) || buff.Metadata.Update.ImmuneCategories.Contains(category)) {
-                return false;
+        foreach (ConcurrentDictionary<int, IList<Buff>> objectOwnerBuffDict in buffs.Values) {
+            foreach (IList<Buff> buffList in objectOwnerBuffDict.Values) {
+                foreach (Buff buff in buffList) {
+                    if (buff.Metadata.Update.ImmuneIds.Contains(newBuffId) || buff.Metadata.Update.ImmuneCategories.Contains(category)) {
+                        return false;
+                    }
+                    break;
+                }
             }
         }
 
         return true;
+    }
+
+    public bool TryGet(IActor caster, int buffId, [NotNullWhen(true)] out IList<Buff>? buff) {
+        if (!buffs.TryGetValue(buffId, out ConcurrentDictionary<int, IList<Buff>>? buffDict)) {
+            buff = null;
+            return false;
+        }
+        return buffDict.TryGetValue(caster.ObjectId, out buff);
+    }
+
+    public bool TryGet(int buffId, [NotNullWhen(true)] out IList<Buff>? buffList) {
+        IList<Buff> results = new List<Buff>();
+        foreach (ConcurrentDictionary<int, IList<Buff>> buffCasterDict in buffs.Values.ToList()) {
+            if (!buffCasterDict.TryGetValue(buffId, out IList<Buff>? buff)) {
+                continue;
+            }
+            results = results.Concat(buff).ToList();
+        }
+        return results.Count > 0 ? (buffList = results) != null : (buffList = null) == null;
+    }
+
+    public bool HasBuff(int buffId, short level = -1) {
+        if (!TryGet(buffId, out IList<Buff>? buffList)) {
+            return false;
+        }
+
+        // Check for any level
+        if (level > 0 && buffList.All(buff => buff.Level != level)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public IList<Buff> GetBuffs() {
+        return buffs.Values.SelectMany(casterDict => casterDict.Values.SelectMany(buffList => buffList)).ToList();
+    }
+
+    public void Clear() {
+        buffs.Clear();
     }
 }

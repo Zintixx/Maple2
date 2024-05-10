@@ -103,7 +103,7 @@ public abstract class Actor<T> : IActor<T>, IDisposable {
 
         record.Counter++;
         if (record.Counter >= record.Metadata.Count) {
-            Buffs.Remove(record.SourceBuffId);
+            Buffs.Remove(record.SourceBuffObjectId);
         }
         target.Buffs.AddBuff(this, target, record.Metadata.EffectId, record.Metadata.EffectLevel);
 

@@ -3,13 +3,13 @@
 namespace Maple2.Server.Game.Model.Skill;
 
 public class ReflectRecord {
-    public readonly int SourceBuffId;
+    public readonly int SourceBuffObjectId;
     public readonly AdditionalEffectMetadataReflect Metadata;
 
     public int Counter = 0;
 
     public ReflectRecord(int id, AdditionalEffectMetadataReflect metadata) {
-        SourceBuffId = id;
+        SourceBuffObjectId = id;
         Metadata = metadata;
     }
 }

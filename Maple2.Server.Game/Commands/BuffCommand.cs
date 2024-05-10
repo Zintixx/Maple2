@@ -3,6 +3,7 @@ using System.CommandLine.Invocation;
 using System.CommandLine.IO;
 using Maple2.Database.Storage;
 using Maple2.Model.Metadata;
+using Maple2.Server.Game.Model;
 using Maple2.Server.Game.Packets;
 using Maple2.Server.Game.Session;
 
@@ -38,8 +39,12 @@ public class BuffCommand : Command {
 
             session.Player.Buffs.AddBuff(session.Player, session.Player, buffId, (short) level);
             if (stack > 1) {
-                session.Player.Buffs.Buffs[buffId].Stack(stack);
-                session.Field?.Broadcast(BuffPacket.Update(session.Player.Buffs.Buffs[buffId]));
+                if (session.Player.Buffs.TryGet(buffId, out IList<Buff>? buffList)) {
+                    foreach (Buff buff in buffList) {
+                        buff.Stack(stack);
+                        session.Field?.Broadcast(BuffPacket.Update(buff));
+                    }
+                }
             }
             ctx.ExitCode = 0;
         } catch (SystemException ex) {

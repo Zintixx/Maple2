@@ -319,7 +319,7 @@ public sealed class NpcScriptManager {
 
         // TODO: Maid checks
 
-        if (jobCondition.BuffId > 0 && !session.Player.Buffs.Buffs.ContainsKey(jobCondition.BuffId)) {
+        if (jobCondition.BuffId > 0 && !session.Player.Buffs.HasBuff(jobCondition.BuffId)) {
             return false;
         }
 
@@ -420,11 +420,7 @@ public sealed class NpcScriptManager {
         }
 
         if (scriptCondition.Buff.Key > 0) {
-            if (scriptCondition.Buff.Value && !session.Player.Buffs.Buffs.ContainsKey(scriptCondition.Buff.Key)) {
-                return false;
-            }
-
-            if (!scriptCondition.Buff.Value && session.Player.Buffs.Buffs.ContainsKey(scriptCondition.Buff.Key)) {
+            if (scriptCondition.Buff.Value && !session.Player.Buffs.HasBuff(scriptCondition.Buff.Key)) {
                 return false;
             }
         }

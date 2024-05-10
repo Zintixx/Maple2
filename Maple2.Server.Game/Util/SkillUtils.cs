@@ -111,27 +111,31 @@ public static class SkillUtils {
         }
 
         foreach ((int id, short level, bool owned, int count, CompareType compare) in condition.Buff) {
-            if (!target.Buffs.Buffs.TryGetValue(id, out Buff? buff)) {
-                return false;
-            }
-            if (buff.Level < level) {
-                return false;
-            }
-            if (owned && buff.Owner.ObjectId == 0) {
+            if (!target.Buffs.TryGet(id, out IList<Buff>? buffs)) {
                 return false;
             }
 
-            bool compareResult = compare switch {
-                CompareType.Equals => buff.Stacks == count,
-                CompareType.Less => buff.Stacks < count,
-                CompareType.LessEquals => buff.Stacks <= count,
-                CompareType.Greater => buff.Stacks > count,
-                CompareType.GreaterEquals => buff.Stacks >= count,
-                _ => true,
-            };
-            if (!compareResult) {
-                return false;
+            foreach (Buff buff in buffs) {
+                if (buff.Level < level) {
+                    return false;
+                }
+                if (owned && buff.Owner.ObjectId == 0) {
+                    return false;
+                }
+
+                bool compareResult = compare switch {
+                    CompareType.Equals => buff.Stacks == count,
+                    CompareType.Less => buff.Stacks < count,
+                    CompareType.LessEquals => buff.Stacks <= count,
+                    CompareType.Greater => buff.Stacks > count,
+                    CompareType.GreaterEquals => buff.Stacks >= count,
+                    _ => true,
+                };
+                if (!compareResult) {
+                    return false;
+                }
             }
+
         }
 
         return true;

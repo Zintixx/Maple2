@@ -55,10 +55,10 @@ public enum BuffKeepCondition {
 }
 
 public enum BuffResetCondition {
-    Reset = 0,
+    None = 0,
     PersistEndTick = 1, // end tick does not reset
     Reset2 = 2, // behaves the same as Reset ??
-    Reset3 = 3, // also behaves like Reset ??
+    DisableOverwrite = 3, // Prevents overwrite and allows to add another buff
 }
 
 public enum BuffDotCondition {
@@ -72,4 +72,19 @@ public enum BuffFlag {
     None = 0,
     UpdateBuff = 1,
     UpdateShield = 2,
+}
+
+public enum SpecialEffectType {
+    EliteBoss = 2, //  Damage reduction
+    WorldBoss = 3, // Double drop rate
+    Potion = 4, // Decrease cooldown
+    Enchant = 5, // Double defiance crystals on enchanting
+    RingCraft = 6, // Double ring crafting
+    DailyQuest = 7, // Exp increase
+    DailyMission = 8, // Additional reward
+    Fishing = 9, // Exp increase
+    Performance = 10, // Exp increase
+    Pvp = 11, // Valor token reward increase
+    CityRestExp = 12, // City rest exp
+    GoldChest = 13, // Gold chest added drops
 }
