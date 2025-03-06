@@ -121,11 +121,11 @@ public class ItemMapper : TypeMapper<ItemMetadata> {
             }
             ItemMetadataOption? option = !hasOption ? null : new ItemMetadataOption(
                 StaticId: data.option.@static,
-                StaticType: data.option.staticMakeType,
+                StaticType: (ItemOptionMakeType) data.option.staticMakeType,
                 RandomId: data.option.random,
-                RandomType: data.option.randomMakeType,
+                ItemOptionType: (ItemOptionMakeType) data.option.randomMakeType,
                 ConstantId: data.option.constant,
-                ConstantType: data.option.constantMakeType,
+                ConstantType: (ItemOptionMakeType) data.option.constantMakeType,
                 LevelFactor: levelFactor,
                 PickId: data.option.optionID);
             ItemMetadataMusic? music = data.property.type != 12 ? null : new ItemMetadataMusic(
@@ -149,7 +149,8 @@ public class ItemMapper : TypeMapper<ItemMetadata> {
                 IsNotAllowedInBlueprint: data.housing.doNotInstallBlueprint);
             ItemMetadataInstall? install = data.property.type != 6 ? null : new ItemMetadataInstall(
                 IsSolidCube: data.install.cubeProp == 1,
-                InteractId: data.install.objCode,
+                FunctionId: data.install.funcCode,
+                ObjectCubeId: data.install.objCode,
                 MapAttribute: Enum.TryParse<MapAttribute>(data.install.mapAttribute, true, out MapAttribute mapAttribute) ? mapAttribute : MapAttribute.none);
 
             yield return new ItemMetadata(

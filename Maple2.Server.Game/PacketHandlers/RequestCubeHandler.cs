@@ -41,7 +41,8 @@ public class RequestCubeHandler : PacketHandler<GameSession> {
         RequestLayout = 35,
         IncreaseArea = 37,
         DecreaseArea = 38,
-        DesignRankReward = 40,
+        InteriorDesignCheckIn = 40,
+        InteriorDesignReward = 41,
         EnablePermission = 42,
         SetPermission = 43,
         IncreaseHeight = 44,
@@ -117,8 +118,11 @@ public class RequestCubeHandler : PacketHandler<GameSession> {
             case Command.DecreaseArea:
                 HandleDecreaseArea(session);
                 break;
-            case Command.DesignRankReward:
-                HandleDesignRankReward(session);
+            case Command.InteriorDesignCheckIn:
+                HandleInteriorDesignCheckIn(session);
+                break;
+            case Command.InteriorDesignReward:
+                HandleInteriorDesignReward(session, packet);
                 break;
             case Command.EnablePermission:
                 HandleEnablePermission(session, packet);
@@ -228,15 +232,11 @@ public class RequestCubeHandler : PacketHandler<GameSession> {
 
                 session.Field.Broadcast(CubePacket.PlaceCube(session.Player.ObjectId, plot, plotCube));
 
-                if (plotCube.ItemType.IsInteractFurnishing) {
-                    if (plotCube.Interact is null) {
-                        Logger.Error("Cube {CubeId} is InteractFurnishing but Interact is null", plotCube.Id);
-                        return;
-                    }
+                if (plotCube.Interact is not null) {
 
-                    if (plotCube.Interact.Nurturing is not null) {
+                    if (plotCube.Interact.Nurturing is not null && plotCube.Interact.Metadata.Nurturing is not null) {
                         using GameStorage.Request db = session.GameStorage.Context();
-                        Nurturing? nurturing = db.GetNurturing(session.AccountId, plotCube.ItemId);
+                        Nurturing? nurturing = db.GetNurturing(session.AccountId, plotCube.ItemId, plotCube.Interact.Metadata.Nurturing);
                         if (nurturing is null) {
                             nurturing = db.CreateNurturing(session.AccountId, plotCube);
                             if (nurturing is null) {
@@ -526,7 +526,24 @@ public class RequestCubeHandler : PacketHandler<GameSession> {
         }
     }
 
-    private void HandleDesignRankReward(GameSession session) { }
+    private void HandleInteriorDesignCheckIn(GameSession session) {
+        Plot? plot = session.Housing.GetFieldPlot();
+        if (plot == null) {
+            return;
+        }
+
+        if (plot.OwnerId != session.AccountId) {
+            session.Send(CubePacket.Error(UgcMapError.s_ugcmap_dont_have_ownership));
+            return;
+        }
+
+        session.Housing.InteriorCheckIn(plot);
+    }
+
+    private void HandleInteriorDesignReward(GameSession session, IByteReader packet) {
+        byte rewardId = packet.ReadByte();
+        session.Housing.InteriorReward(rewardId);
+    }
 
     private void HandleEnablePermission(GameSession session, IByteReader packet) {
         var permission = packet.Read<HomePermission>();

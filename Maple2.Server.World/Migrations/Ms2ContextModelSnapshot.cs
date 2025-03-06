@@ -299,6 +299,9 @@ namespace Maple2.Server.World.Migrations
                         .IsRequired()
                         .HasColumnType("json");
 
+                    b.Property<short>("ReturnChannel")
+                        .HasColumnType("smallint");
+
                     b.Property<int>("ReturnMapId")
                         .HasColumnType("int");
 
@@ -385,6 +388,10 @@ namespace Maple2.Server.World.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("CollectedItems")
+                        .IsRequired()
+                        .HasColumnType("json");
+
+                    b.Property<string>("DungeonRankRewards")
                         .IsRequired()
                         .HasColumnType("json");
 
@@ -494,6 +501,49 @@ namespace Maple2.Server.World.Migrations
                     b.HasIndex("CharacterId");
 
                     b.ToTable("club-member", (string)null);
+                });
+
+            modelBuilder.Entity("Maple2.Database.Model.DungeonRecord", b =>
+                {
+                    b.Property<long>("OwnerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("DungeonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ClearTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("DailyClears")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateTime>("DailyResetTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("ExtraDailyClears")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<byte>("ExtraWeeklyClears")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<short>("LifetimeRecord")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("TotalClears")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("WeeklyClears")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<short>("WeeklyRecord")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTime>("WeeklyResetTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("OwnerId", "DungeonId");
+
+                    b.ToTable("dungeon-record", (string)null);
                 });
 
             modelBuilder.Entity("Maple2.Database.Model.GameEventUserValue", b =>
@@ -676,10 +726,23 @@ namespace Maple2.Server.World.Migrations
                     b.Property<int>("CurrentArchitectScore")
                         .HasColumnType("int");
 
+                    b.Property<long>("DecorationExp")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DecorationLevel")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DecorationRewardTimestamp")
+                        .HasColumnType("bigint");
+
                     b.Property<byte>("Height")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint unsigned")
                         .HasDefaultValue((byte)3);
+
+                    b.Property<string>("InteriorRewardsClaimed")
+                        .IsRequired()
+                        .HasColumnType("json");
 
                     b.Property<DateTime>("LastModified")
                         .ValueGeneratedOnAddOrUpdate()
@@ -750,14 +813,14 @@ namespace Maple2.Server.World.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
-                    b.Property<string>("CubeSettings")
-                        .HasColumnType("json");
-
                     b.Property<long>("HomeLayoutId")
                         .HasColumnType("bigint");
 
                     b.Property<int>("HousingCategory")
                         .HasColumnType("int");
+
+                    b.Property<string>("Interact")
+                        .HasColumnType("json");
 
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
@@ -1384,11 +1447,11 @@ namespace Maple2.Server.World.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
-                    b.Property<string>("CubeSettings")
-                        .HasColumnType("json");
-
                     b.Property<int>("HousingCategory")
                         .HasColumnType("int");
+
+                    b.Property<string>("Interact")
+                        .HasColumnType("json");
 
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
@@ -1649,6 +1712,15 @@ namespace Maple2.Server.World.Migrations
                         .IsRequired();
 
                     b.Navigation("Character");
+                });
+
+            modelBuilder.Entity("Maple2.Database.Model.DungeonRecord", b =>
+                {
+                    b.HasOne("Maple2.Database.Model.Character", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Maple2.Database.Model.GameEventUserValue", b =>

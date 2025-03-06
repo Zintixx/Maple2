@@ -31,9 +31,10 @@ public class Character {
     public int Title;
     public short Insignia;
 
-    public int InstanceId;
+    public int RoomId;
     public int InstanceMapId;
     public short Channel;
+    public short ReturnChannel;
 
     public long StorageCooldown;
     public long DoctorCooldown;
@@ -50,5 +51,6 @@ public class Character {
     public required Mastery Mastery;
     public AchievementInfo AchievementInfo;
     public MarriageInfo MarriageInfo;
+    public readonly Dictionary<int, DungeonEnterLimit> DungeonEnterLimits = [];
     public long PremiumTime;
 }

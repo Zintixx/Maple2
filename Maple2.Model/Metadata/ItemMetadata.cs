@@ -89,11 +89,11 @@ public record ItemMetadataAdditionalEffect(
 
 public record ItemMetadataOption(
     int StaticId,
-    int StaticType,
+    ItemOptionMakeType StaticType,
     int RandomId,
-    int RandomType,
+    ItemOptionMakeType ItemOptionType,
     int ConstantId,
-    int ConstantType,
+    ItemOptionMakeType ConstantType,
     int LevelFactor,
     int PickId);
 
@@ -116,7 +116,8 @@ public record ItemMetadataHousing(
 
 public record ItemMetadataInstall(
     bool IsSolidCube,
-    int InteractId,
+    int FunctionId,
+    int ObjectCubeId,
     MapAttribute MapAttribute
 );
 

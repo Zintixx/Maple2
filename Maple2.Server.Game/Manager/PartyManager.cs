@@ -294,6 +294,18 @@ public class PartyManager : IDisposable {
         session.Send(PartyPacket.StartVote(Party.Vote));
     }
 
+    public void SetDungeon(int dungeonId, int dungeonRoomId, bool set) {
+        if (Party == null) {
+            return;
+        }
+        Party.DungeonId = dungeonId;
+        Party.DungeonLobbyRoomId = dungeonRoomId;
+        Party.DungeonSet = set;
+        session.Dungeon.SetDungeon(dungeonId, dungeonRoomId, set);
+
+        session.Send(PartyPacket.DungeonReset(set, dungeonId));
+    }
+
     public void SetPartySearch(PartySearch? partySearch) {
         if (Party == null) {
             return;
@@ -347,12 +359,18 @@ public class PartyManager : IDisposable {
         }
 
         bool wasOnline = member.Info.Online;
+        var previousDungeonLimits = new Dictionary<int, DungeonEnterLimit>(member.Info.DungeonEnterLimits);
+
         member.Info.Update(type, info);
 
         if (type == UpdateField.Health || type == UpdateField.Level) {
             session.Send(PartyPacket.UpdateStats(member));
         } else {
             session.Send(PartyPacket.Update(member));
+        }
+
+        if (previousDungeonLimits != member.Info.DungeonEnterLimits) {
+            session.Send(PartyPacket.UpdateDungeonInfo(member));
         }
 
         if (session.CharacterId != member.CharacterId && member.Info.Online != wasOnline) {

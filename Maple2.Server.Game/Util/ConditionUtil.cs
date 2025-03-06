@@ -48,7 +48,6 @@ public static class ConditionUtil {
                 break;
             case ConditionType.map:
             case ConditionType.fish:
-            case ConditionType.fish_big:
             case ConditionType.mastery_grade:
             case ConditionType.set_mastery_grade:
             case ConditionType.item_add:
@@ -97,6 +96,7 @@ public static class ConditionUtil {
             case ConditionType.laddertime:
             case ConditionType.holdtime:
             case ConditionType.riding:
+            case ConditionType.fish_big:
                 if (code.Range != null && InRange((ConditionMetadata.Range<int>) code.Range, (int) longValue)) {
                     return true;
                 }
@@ -126,6 +126,7 @@ public static class ConditionUtil {
             case ConditionType.gemstone_putoff:
             case ConditionType.fish_fail:
             case ConditionType.music_play_grade:
+            case ConditionType.music_play_ensemble:
             case ConditionType.breakable_object:
             case ConditionType.change_profile:
             case ConditionType.install_billboard:
@@ -222,6 +223,7 @@ public static class ConditionUtil {
             case ConditionType.mastery_grade:
             case ConditionType.set_mastery_grade:
             case ConditionType.music_play_grade:
+            case ConditionType.music_play_ensemble:
             case ConditionType.item_add:
             case ConditionType.item_pickup:
             case ConditionType.beauty_add:

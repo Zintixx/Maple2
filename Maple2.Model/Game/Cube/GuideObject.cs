@@ -26,9 +26,9 @@ public class FishingGuideObject : IGuideObject {
     public GuideObjectType Type => GuideObjectType.Fishing;
 
     public readonly FishingRodTable.Entry Rod;
-    public readonly FishingSpotTable.Entry Spot;
+    public readonly FishTable.Spot Spot;
 
-    public FishingGuideObject(FishingRodTable.Entry rod, FishingSpotTable.Entry spot) {
+    public FishingGuideObject(FishingRodTable.Entry rod, FishTable.Spot spot) {
         Rod = rod;
         Spot = spot;
     }
@@ -51,5 +51,19 @@ public class SkillMagicControlGuide : IGuideObject {
         //     writer.WriteLong();
         //     writer.WriteByte();
         // }
+    }
+}
+
+public class BallGuideObject : IGuideObject {
+    public GuideObjectType Type => GuideObjectType.Construction;
+
+    private readonly float size;
+
+    public BallGuideObject(float size) {
+        this.size = size;
+    }
+
+    public void WriteTo(IByteWriter writer) {
+        writer.WriteFloat(size);
     }
 }

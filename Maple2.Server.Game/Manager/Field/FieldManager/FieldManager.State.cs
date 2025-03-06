@@ -20,10 +20,10 @@ namespace Maple2.Server.Game.Manager.Field;
 
 public partial class FieldManager {
     // Actors
-    internal readonly ConcurrentDictionary<int, FieldPlayer> Players = new();
-    internal readonly ConcurrentDictionary<int, FieldNpc> Npcs = new();
-    internal readonly ConcurrentDictionary<int, FieldNpc> Mobs = new();
-    internal readonly ConcurrentDictionary<int, FieldPet> Pets = new();
+    public ConcurrentDictionary<int, FieldPlayer> Players { get; } = [];
+    public ConcurrentDictionary<int, FieldNpc> Npcs { get; } = [];
+    public ConcurrentDictionary<int, FieldNpc> Mobs { get; } = [];
+    public ConcurrentDictionary<int, FieldPet> Pets { get; } = [];
 
     // Entities
     private readonly ConcurrentDictionary<string, FieldBreakable> fieldBreakables = new();
@@ -31,6 +31,7 @@ public partial class FieldManager {
     private readonly ConcurrentDictionary<string, FieldInteract> fieldInteracts = new();
     private readonly ConcurrentDictionary<string, FieldFunctionInteract> fieldFunctionInteracts = new();
     private readonly ConcurrentDictionary<string, FieldInteract> fieldAdBalloons = new();
+    private readonly ConcurrentDictionary<int, FieldInstrument> fieldInstruments = new();
     private readonly ConcurrentDictionary<int, FieldItem> fieldItems = new();
     private readonly ConcurrentDictionary<int, FieldMobSpawn> fieldMobSpawns = new();
     private readonly ConcurrentDictionary<int, FieldSkill> fieldSkills = new();
@@ -40,6 +41,7 @@ public partial class FieldManager {
     private readonly ConcurrentDictionary<FieldProperty, IFieldProperty> fieldProperties = new();
 
     public RoomTimer? RoomTimer { get; private set; }
+
 
     #region Helpers
     public ICollection<FieldNpc> EnumerateNpcs() => Npcs.Values.Concat(Mobs.Values).ToList();
@@ -54,7 +56,7 @@ public partial class FieldManager {
         // TODO: Not sure what the difference is between instance ids.
         player.Character.MapId = MapId;
         player.Character.InstanceMapId = MapId;
-        player.Character.InstanceId = InstanceId;
+        player.Character.RoomId = RoomId;
 
         var fieldPlayer = new FieldPlayer(session, player) {
             Position = position,
@@ -85,13 +87,10 @@ public partial class FieldManager {
             player.Character.ReviveMapId = Metadata.Property.RevivalReturnId;
         }
 
-        if (Metadata.Property.EnterReturnId != 0 &&
-            Metadata.Property.Type != MapType.Arcade &&
-            Metadata.Property.Type != MapType.PocketRealm &&
-            Metadata.Property.Type != MapType.Dungeon &&
-            Metadata.Property.Type != MapType.Event &&
-            Metadata.Property.Type != MapType.Event2) {
-            player.Character.ReturnMapId = Metadata.Property.EnterReturnId;
+        if (FieldInstance.InstanceType == InstanceType.none) {
+            if (Metadata.Property.EnterReturnId != 0) {
+                player.Character.ReturnMapId = Metadata.Property.EnterReturnId;
+            }
         }
 
         return fieldPlayer;
@@ -154,38 +153,43 @@ public partial class FieldManager {
         return fieldPortal;
     }
 
-    public FieldPortal SpawnPortal(Portal portal, int instanceId, Vector3 position = default, Vector3 rotation = default) {
+    public FieldPortal SpawnPortal(Portal portal, int roomId, Vector3 position = default, Vector3 rotation = default) {
         var fieldPortal = new FieldPortal(this, NextLocalId(), portal) {
             Position = position != default ? position : portal.Position,
             Rotation = rotation != default ? rotation : portal.Rotation,
-            InstanceId = instanceId,
+            RoomId = roomId,
         };
         fieldPortals[fieldPortal.ObjectId] = fieldPortal;
 
         return fieldPortal;
     }
 
-    public FieldPortal SpawnCubePortal(PlotCube plotCube) {
+    public FieldPortal? SpawnCubePortal(PlotCube plotCube) {
         int targetMapId = MapId;
         long targetHomeAccountId = 0;
-        if (!string.IsNullOrEmpty(plotCube.CubePortalSettings!.DestinationTarget)) {
-            switch (plotCube.CubePortalSettings.Destination) {
+        CubePortalSettings? cubePortalSettings = plotCube.Interact?.PortalSettings;
+        if (cubePortalSettings is null) {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(cubePortalSettings.DestinationTarget)) {
+            switch (cubePortalSettings.Destination) {
                 case CubePortalDestination.PortalInHome:
                     targetMapId = Constant.DefaultHomeMapId;
                     break;
                 case CubePortalDestination.SelectedMap:
-                    targetMapId = int.Parse(plotCube.CubePortalSettings.DestinationTarget);
+                    targetMapId = int.Parse(cubePortalSettings.DestinationTarget);
                     break;
                 case CubePortalDestination.FriendHome:
                     targetMapId = Constant.DefaultHomeMapId;
-                    targetHomeAccountId = long.Parse(plotCube.CubePortalSettings.DestinationTarget);
+                    targetHomeAccountId = long.Parse(cubePortalSettings.DestinationTarget);
                     break;
             }
         }
-        var portal = new Portal(NextLocalId(), targetMapId, -1, PortalType.InHome, plotCube.CubePortalSettings.Method, plotCube.Position, new Vector3(0, 0, plotCube.Rotation), new Vector3(200, 200, 250), 0, 0, Visible: true, MinimapVisible: false, Enable: true);
+        var portal = new Portal(NextLocalId(), targetMapId, -1, PortalType.InHome, cubePortalSettings.Method, plotCube.Position, new Vector3(0, 0, plotCube.Rotation), new Vector3(200, 200, 250), 0, 0, Visible: true, MinimapVisible: false, Enable: true);
         FieldPortal fieldPortal = SpawnPortal(portal);
         fieldPortal.HomeId = targetHomeAccountId;
-        plotCube.CubePortalSettings.PortalObjectId = fieldPortal.ObjectId;
+        cubePortalSettings.PortalObjectId = fieldPortal.ObjectId;
 
         return fieldPortal;
     }
@@ -451,7 +455,7 @@ public partial class FieldManager {
         // Spawn a hat within a random range of 5 min to 8 hours
         int delay = Random.Shared.Next(1, 97) * (int) TimeSpan.FromMinutes(5).TotalMilliseconds;
         MapMetadata bonusMapMetadata = bonusMaps[Random.Shared.Next(bonusMaps.Count)];
-        FieldManager? bonusMap = FieldFactory.Create(bonusMapMetadata.Id);
+        IField? bonusMap = FieldFactory.Create(bonusMapMetadata.Id);
         bonusMap?.Init();
         Console.WriteLine($"Creating bonus map {bonusMapMetadata.Id} at {spawn.Position} in {delay} ms.");
         if (bonusMap == null) {
@@ -460,7 +464,7 @@ public partial class FieldManager {
         bonusMap.SetRoomTimer(RoomTimerType.Clock, 90000);
         var portal = new Portal(NextLocalId(), bonusMapMetadata.Id, -1, PortalType.Event, PortalActionType.Interact, spawn.Position, spawn.Rotation,
             new Vector3(200, 200, 250), 0, 0, true, false, true);
-        FieldPortal fieldPortal = SpawnPortal(portal, bonusMap.InstanceId);
+        FieldPortal fieldPortal = SpawnPortal(portal, bonusMap.RoomId);
         fieldPortal.Model = Metadata.Property.Continent switch {
             Continent.VictoriaIsland => "Eff_event_portal_A01",
             Continent.KarkarIsland => "Eff_kr_sandswirl_01",
@@ -473,7 +477,7 @@ public partial class FieldManager {
         Scheduler.Schedule(() => SetBonusMapPortal(bonusMaps, spawn), delay);
     }
 
-    private void SetRoomTimer(RoomTimerType type, int duration) {
+    public void SetRoomTimer(RoomTimerType type, int duration) {
         RoomTimer = new RoomTimer(this, type, duration);
     }
 
@@ -499,6 +503,8 @@ public partial class FieldManager {
             Rotation = owner.Rotation,
         };
 
+        fieldInstruments[fieldInstrument.ObjectId] = fieldInstrument;
+
         return fieldInstrument;
     }
 
@@ -523,7 +529,7 @@ public partial class FieldManager {
             return null;
         }
 
-        if (!FunctionCubeMetadata.TryGet(item.Install.InteractId, out FunctionCubeMetadata? metadata)) {
+        if (!FunctionCubeMetadata.TryGet(item.Install.ObjectCubeId, out FunctionCubeMetadata? metadata)) {
             return null;
         }
 
@@ -547,7 +553,7 @@ public partial class FieldManager {
     #endregion
 
     #region Remove
-    public bool RemovePlayer(int objectId, [NotNullWhen(true)] out FieldPlayer? fieldPlayer) {
+    public virtual bool RemovePlayer(int objectId, [NotNullWhen(true)] out FieldPlayer? fieldPlayer) {
         if (Players.TryRemove(objectId, out fieldPlayer)) {
             CommitPlot(fieldPlayer.Session);
             Broadcast(FieldPacket.RemovePlayer(objectId));
@@ -637,6 +643,15 @@ public partial class FieldManager {
         Broadcast(PortalPacket.Remove(portal.Value.Id));
         return true;
     }
+
+    public bool RemoveInstrument(int objectId) {
+        if (!fieldInstruments.TryRemove(objectId, out FieldInstrument? instrument)) {
+            return false;
+        }
+
+        Broadcast(InstrumentPacket.StopScore(instrument));
+        return true;
+    }
     #endregion
 
     #region Events
@@ -649,9 +664,14 @@ public partial class FieldManager {
         foreach (FieldInteract fieldInteract in fieldAdBalloons.Values) {
             added.Session.Send(InteractObjectPacket.Add(fieldInteract.Object));
         }
+        foreach (FieldInstrument fieldInstrument in fieldInstruments.Values) {
+            if (fieldInstrument.Score != null) {
+                added.Session.Send(InstrumentPacket.StartScore(fieldInstrument, fieldInstrument.Score));
+            }
+        }
         if (MapId is Constant.DefaultHomeMapId) {
             IEnumerable<PlotCube> interactCubes = Plots.FirstOrDefault().Value.Cubes.Values
-                .Where(x => x.ItemType.IsInteractFurnishing && x.HousingCategory is not HousingCategory.Ranching and not HousingCategory.Farming);
+                .Where(x => x.Interact != null && x.HousingCategory is not HousingCategory.Ranching and not HousingCategory.Farming);
             IEnumerable<PlotCube> lifeSkillsCubes = fieldFunctionInteracts.Values
                 .Select(x => x.Cube);
 
@@ -660,6 +680,15 @@ public partial class FieldManager {
             result.AddRange(lifeSkillsCubes);
             added.Session.Send(FunctionCubePacket.SendCubes(result));
         }
+
+        foreach (Plot plot in Plots.Values) {
+            foreach (PlotCube plotCube in plot.Cubes.Values) {
+                if (plotCube.Interact?.NoticeSettings is not null) {
+                    added.Session.Send(HomeActionPacket.SendCubeNoticeSettings(plotCube));
+                }
+            }
+        }
+
         foreach (FieldPlayer fieldPlayer in Players.Values) {
             added.Session.Send(FieldPacket.AddPlayer(fieldPlayer.Session));
             if (fieldPlayer.Session.GuideObject != null) {

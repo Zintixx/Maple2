@@ -3,6 +3,7 @@ using Maple2.Database.Extensions;
 using Maple2.Model.Common;
 using Maple2.Model.Enum;
 using Maple2.Model.Game;
+using Maple2.Model.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,20 +21,9 @@ internal class UgcMapCube {
 
     public int ItemId { get; set; }
     public HousingCategory HousingCategory { get; set; }
-    public CubeSettings? CubeSettings { get; set; }
+    public InteractCube? Interact { get; set; }
 
     public UgcItemLook? Template { get; set; }
-
-    [return: NotNullIfNotNull(nameof(other))]
-    public static implicit operator PlotCube?(UgcMapCube? other) {
-        return other == null ? null : new PlotCube(other.ItemId, other.Id, other.Template) {
-            Position = new Vector3B(other.X, other.Y, other.Z),
-            Rotation = other.Rotation,
-            HousingCategory = other.HousingCategory,
-            CubePortalSettings = other.CubeSettings is CubePortalSettings portalSettings ? portalSettings : null,
-            Interact = other.CubeSettings is InteractCube interactCube ? interactCube : null,
-        };
-    }
 
     [return: NotNullIfNotNull(nameof(other))]
     public static implicit operator UgcMapCube?(PlotCube? other) {
@@ -46,7 +36,7 @@ internal class UgcMapCube {
             ItemId = other.ItemId,
             Template = other.Template,
             HousingCategory = other.HousingCategory,
-            CubeSettings = CubeHelper.GetCubeSettings(other),
+            Interact = other.Interact,
         };
     }
 
@@ -59,6 +49,6 @@ internal class UgcMapCube {
             .HasForeignKey(cube => cube.UgcMapId);
 
         builder.Property(cube => cube.Template).HasJsonConversion();
-        builder.Property(cube => cube.CubeSettings).HasJsonConversion();
+        builder.Property(cube => cube.Interact).HasJsonConversion();
     }
 }

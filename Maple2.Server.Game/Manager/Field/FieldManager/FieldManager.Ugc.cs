@@ -59,9 +59,12 @@ public partial class FieldManager {
     private void CommitPlot(GameSession session) {
         Home home = session.Player.Value.Home;
         using GameStorage.Request db = GameStorage.Context();
-        if (session.AccountId == OwnerId && home.Indoor.MapId == MapId && Plots.TryGetValue(home.Indoor.Number, out Plot? indoorPlot) && !indoorPlot.IsPlanner) {
-            SavePlot(indoorPlot);
+        if (this is HomeFieldManager homeField) {
+            if (session.AccountId == homeField.OwnerId && home.Indoor.MapId == MapId && Plots.TryGetValue(home.Indoor.Number, out Plot? indoorPlot) && !indoorPlot.IsPlanner) {
+                SavePlot(indoorPlot);
+            }
         }
+
         if (home.Outdoor != null && home.Outdoor.MapId == MapId && Plots.TryGetValue(home.Outdoor.Number, out Plot? outdoorPlot)) {
             SavePlot(outdoorPlot);
         }
