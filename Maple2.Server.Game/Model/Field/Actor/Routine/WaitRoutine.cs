@@ -1,9 +1,9 @@
-﻿namespace Maple2.Server.Game.Model.Routine;
+namespace Maple2.Server.Game.Model.Routine;
 
 public class WaitRoutine : NpcRoutine {
     private TimeSpan duration;
 
-    public WaitRoutine(FieldNpc npc, short sequenceId, float duration) : base(npc, sequenceId) {
+    public WaitRoutine(FieldNpc npc, float duration) : base(npc) {
         this.duration = TimeSpan.FromSeconds(duration);
     }
 

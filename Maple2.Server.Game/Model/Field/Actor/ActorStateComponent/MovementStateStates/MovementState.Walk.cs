@@ -46,15 +46,47 @@ public partial class MovementState {
 
         baseSpeed = isWalking ? actor.Value.Metadata.Action.WalkSpeed : actor.Value.Metadata.Action.RunSpeed;
 
-        if (actor.Animation.PlayingSequence?.Name == sequence || actor.Animation.TryPlaySequence(sequence, aniSpeed * Speed, AnimationType.Misc)) {
+        if (actor.Animation.PlayingSequence?.Name == sequence) {
             stateSequence = actor.Animation.PlayingSequence;
             walkSequence = stateSequence;
             walkTask = task;
+            SetState(ActorState.Walk);
+            return;
+        }
 
+        AnimationCallbacks? callbacks = null;
+        callbacks = new AnimationCallbacks {
+            OnComplete = () => {
+                if (State == ActorState.Walk) {
+                    if (actor.Animation.TryPlay(new AnimationRequest {
+                        SequenceName = sequence,
+                        Speed = aniSpeed * Speed,
+                        Priority = AnimationPriority.Move,
+                        CanInterruptSelf = true,
+                        Callbacks = callbacks,
+                    })) {
+                        stateSequence = actor.Animation.PlayingSequence;
+                        walkSequence = stateSequence;
+                    }
+                } else {
+                    walkTask?.Cancel();
+                }
+            },
+        };
+
+        if (actor.Animation.TryPlay(new AnimationRequest {
+            SequenceName = sequence,
+            Speed = aniSpeed * Speed,
+            Priority = AnimationPriority.Move,
+            CanInterruptSelf = true,
+            Callbacks = callbacks,
+        })) {
+            stateSequence = actor.Animation.PlayingSequence;
+            walkSequence = stateSequence;
+            walkTask = task;
             SetState(ActorState.Walk);
         } else {
             task.Cancel();
-
             Idle();
         }
     }
@@ -181,21 +213,5 @@ public partial class MovementState {
         }
     }
 
-    public void StateWalkEvent(string keyName) {
-        switch (keyName) {
-            case "end":
-                if (State == ActorState.Walk) {
-                    if (actor.Animation.TryPlaySequence(stateSequence!.Name, aniSpeed * Speed, AnimationType.Misc)) {
-                        stateSequence = actor.Animation.PlayingSequence;
-                    }
-
-                    return;
-                }
-                walkTask?.Cancel();
-
-                break;
-            default:
-                break;
-        }
-    }
 }
+

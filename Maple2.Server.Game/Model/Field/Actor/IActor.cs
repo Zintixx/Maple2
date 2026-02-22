@@ -30,7 +30,6 @@ public interface IActor : IFieldEntity {
     public virtual void TargetAttack(SkillRecord record) { }
 
     public virtual SkillRecord? CastSkill(int id, short level, long uid, int castTick, in Vector3 position = default, in Vector3 direction = default, in Vector3 rotation = default, float rotateZ = 0f, byte motionPoint = 0) { return null; }
-    public virtual void KeyframeEvent(string keyName) { }
 }
 
 public interface IActor<out T> : IActor {

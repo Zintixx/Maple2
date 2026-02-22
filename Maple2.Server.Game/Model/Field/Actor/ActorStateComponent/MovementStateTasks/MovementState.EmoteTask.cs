@@ -1,4 +1,5 @@
 ﻿using Maple2.Model.Enum;
+using Maple2.Server.Game.Model.ActorStateComponent;
 using Maple2.Server.Game.Model.Enum;
 using static Maple2.Server.Game.Model.ActorStateComponent.TaskState;
 
@@ -41,7 +42,7 @@ public partial class MovementState {
             return;
         }
 
-        if (!actor.Animation.TryPlaySequence(sequence, 1, AnimationType.Misc)) {
+        if (!actor.Animation.TryPlay(new AnimationRequest { SequenceName = sequence, Priority = AnimationPriority.Idle })) {
             task.Cancel();
             return;
         }

@@ -68,6 +68,12 @@ public class AiState {
         return aiStack.Count > 0;
     }
 
+    /// <summary>
+    /// True while the AI script has an active tree running (Battle or BattleEnd).
+    /// Used to suppress default idle routines while the AI is in control.
+    /// </summary>
+    public bool IsActive => AiMetadata != null && currentTree != DecisionTreeType.None;
+
     public bool IsWaitingOnTask(long tickCount) {
         if (currentTask is null) {
             return false;
@@ -109,18 +115,31 @@ public class AiState {
         bool isInBattle = actor.BattleState.InBattle;
 
         if (!isInBattle) {
+            // Transition from Battle → BattleEnd (or None if no BattleEnd tree).
             if (currentTree == DecisionTreeType.Battle) {
                 aiStack.Clear();
+                if (battleEnd is not null) {
+                    currentTree = DecisionTreeType.BattleEnd;
+                    Push(battleEnd);
+                } else {
+                    currentTree = DecisionTreeType.None;
+                }
+            }
 
-                currentTree = battleEnd is not null ? DecisionTreeType.BattleEnd : DecisionTreeType.None;
-            } else if (currentTree == DecisionTreeType.BattleEnd && aiStack.Count == 0) {
+            // BattleEnd tree finished when its stack drains.
+            if (currentTree == DecisionTreeType.BattleEnd && aiStack.Count == 0) {
                 currentTree = DecisionTreeType.None;
             }
 
-            return;
-        } else if (currentTree == DecisionTreeType.BattleEnd) {
-            aiStack.Clear();
+            // Nothing left to process — let default routines take over.
+            if (currentTree != DecisionTreeType.BattleEnd) {
+                return;
+            }
 
+            // Fall through to process the BattleEnd stack below.
+        } else if (currentTree == DecisionTreeType.BattleEnd) {
+            // Re-entered battle while running BattleEnd — cancel it.
+            aiStack.Clear();
             currentTree = DecisionTreeType.None;
         }
 
@@ -145,9 +164,8 @@ public class AiState {
         if (aiStack.Count == 0) {
             if (currentTree == DecisionTreeType.Battle) {
                 Push(battle!);
-            } else if (currentTree == DecisionTreeType.BattleEnd) {
-                Push(battleEnd!);
             }
+            // BattleEnd is pushed once at transition time; it does not loop.
         }
 
         while (aiStack.Count > 0) {

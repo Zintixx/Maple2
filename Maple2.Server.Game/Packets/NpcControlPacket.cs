@@ -74,7 +74,7 @@ public static class NpcControlPacket {
         buffer.WriteNpcEntry(npc,
             flags: 2, // bit-1 (AdditionalEffectRelated), bit-2 (UIHpBarRelated)
             velocity: npc.MovementState.Velocity,
-            animSpeed: (short) (npc.Animation.SequenceSpeed * 100),
+            animSpeed: (short) (npc.Animation.PlaybackSpeed * 100),
             bossTargetId: npc.BattleState.TargetId,
             state: state,
             seqId: seqId);

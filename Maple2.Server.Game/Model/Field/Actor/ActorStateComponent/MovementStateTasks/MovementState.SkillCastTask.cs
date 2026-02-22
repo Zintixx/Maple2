@@ -97,11 +97,17 @@ public partial class MovementState {
             return;
         }
 
-        if (!actor.Animation.TryPlaySequence(cast.Motion.MotionProperty.SequenceName, cast.Motion.MotionProperty.SequenceSpeed, AnimationType.Skill, out AnimationSequenceMetadata? sequence, skill: cast.Metadata)) {
+        if (!actor.Animation.TryPlay(new AnimationRequest {
+            SequenceName = cast.Motion.MotionProperty.SequenceName,
+            Speed = cast.Motion.MotionProperty.SequenceSpeed,
+            Priority = AnimationPriority.Skill,
+            Skill = cast.Metadata,
+        })) {
             task.Cancel();
 
             return;
         }
+        AnimationSequenceMetadata? sequence = actor.Animation.PlayingSequence;
 
         if (task.FacePos != new Vector3(0, 0, 0)) {
             actor.Transform.LookTo(Vector3.Normalize(task.FacePos - actor.Position));

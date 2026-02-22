@@ -23,7 +23,7 @@ public partial class MovementState {
     private Vector3 lastFacing;
     private SkillRecord? lastCastSkill;
     #endregion
-    private bool hasIdleA;
+    private bool hasIdleSequence;
     private long lastTick;
     private long lastControlTick;
     private float speedOverride;
@@ -37,7 +37,7 @@ public partial class MovementState {
     public MovementState(FieldNpc actor) {
         this.actor = actor;
 
-        hasIdleA = actor.Animation.RigMetadata?.Sequences?.ContainsKey("Idle_A") ?? false;
+        hasIdleSequence = !string.IsNullOrEmpty(actor.Animation.IdleSequence.Name);
         aniSpeed = actor.Value.Metadata.Model.AniSpeed;
 
         SetState(ActorState.Spawn);
@@ -148,51 +148,38 @@ public partial class MovementState {
         bool setAttackIdle = false;
 
         if (sequence == string.Empty) {
-            setAttackIdle = actor.BattleState.InBattle;
-            sequence = setAttackIdle ? "Attack_Idle_A" : "Idle_A";
+            sequence = actor.BattleState.InBattle ?
+                "Attack_Idle_A" : actor.Animation.IdleSequence.Name;
         }
+
+        // Cancel any current animation before playing Idle, so lower-priority Idle can always play
+        actor.Animation.Cancel();
 
         SetState(ActorState.Idle);
 
-        if (hasIdleA) {
-            if (actor.Animation.TryPlaySequence(sequence, aniSpeed, AnimationType.Misc)) {
+        if (hasIdleSequence) {
+            if (actor.Animation.TryPlay(new AnimationRequest {
+                    SequenceName = sequence,
+                    Speed = aniSpeed,
+                    Priority = AnimationPriority.Idle,
+                    CanInterruptSelf = true,
+                })) {
                 stateSequence = actor.Animation.PlayingSequence;
-            } else if (setAttackIdle && actor.Animation.TryPlaySequence("Idle_A", aniSpeed, AnimationType.Misc)) {
+            } else if (setAttackIdle && actor.Animation.TryPlay(new AnimationRequest {
+                           SequenceName = actor.Animation.IdleSequence.Name,
+                           Speed = aniSpeed,
+                           Priority = AnimationPriority.Idle,
+                           CanInterruptSelf = true,
+                       })) {
                 stateSequence = actor.Animation.PlayingSequence;
             }
         }
+        // Sync stateSequence to prevent infinite watchdog loop when TryPlay fails
+        stateSequence = actor.Animation.PlayingSequence;
     }
 
-    public void StateRegenEvent(string keyName) {
-        switch (keyName) {
-            case "end":
-                Idle();
-
-                break;
-            default:
-                break;
-        }
-    }
-
-    public void KeyframeEvent(string keyName) {
-        switch (State) {
-            case ActorState.Regen:
-                StateRegenEvent(keyName);
-                break;
-            case ActorState.Walk:
-                StateWalkEvent(keyName);
-                break;
-            case ActorState.PcSkill:
-                StateSkillEvent(keyName);
-                break;
-            case ActorState.Idle:
-            case ActorState.Emotion:
-            case ActorState.EmotionIdle:
-                StateEmoteEvent(keyName);
-                break;
-            default:
-                break;
-        }
+    public void ClaimAnimation() {
+        stateSequence = actor.Animation.PlayingSequence;
     }
 
     public void Update(long tickCount) {
@@ -217,9 +204,16 @@ public partial class MovementState {
                 StateWalkUpdate(tickCount, tickDelta);
                 break;
             case ActorState.Spawn:
-                if (actor.Animation.TryPlaySequence("Regen_A", aniSpeed, AnimationType.Misc)) {
+                if (actor.Animation.TryPlay(new AnimationRequest {
+                        SequenceName = "Regen_A",
+                        Speed = aniSpeed,
+                        Priority = AnimationPriority.Idle,
+                        CanInterruptSelf = true,
+                        Callbacks = new AnimationCallbacks {
+                            OnComplete = () => Idle(),
+                        },
+                    })) {
                     SetState(ActorState.Regen);
-
                     stateSequence = actor.Animation.PlayingSequence;
                 } else {
                     Idle();

@@ -572,8 +572,6 @@ public class FieldPlayer : Actor<Player> {
         }
     }
 
-    public override void KeyframeEvent(string keyName) { }
-
     public void MoveToPosition(Vector3 position, Vector3 rotation) {
         if (!Field.ValidPosition(position)) {
             return;

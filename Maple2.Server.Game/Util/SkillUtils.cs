@@ -155,7 +155,7 @@ public static class SkillUtils {
                  !condition.DungeonGroupType.Contains(dungeonFieldManager.DungeonMetadata.GroupType))) {
                 return false;
             }
-            if (condition.ActiveSkill.Length > 0 && condition.ActiveSkill.All(id => owner.Animation.Current?.Skill?.Id != id)) {
+            if (condition.ActiveSkill.Length > 0 && condition.ActiveSkill.All(id => owner.Animation.Current?.Request.Skill?.Id != id)) {
                 return false;
             }
             if (condition.OnlyOnBattleMount && player.Session.Ride.Ride?.Metadata.Basic.Type != RideOnType.Battle) {

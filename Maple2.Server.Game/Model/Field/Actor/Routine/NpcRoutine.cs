@@ -1,4 +1,6 @@
-﻿using Maple2.Model.Enum;
+using Maple2.Model.Enum;
+using Maple2.Server.Game.Model.ActorStateComponent;
+using Maple2.Server.Game.Model.Enum;
 using Maple2.Server.Game.Model.State;
 
 namespace Maple2.Server.Game.Model.Routine;
@@ -12,10 +14,20 @@ public abstract class NpcRoutine {
     // Used for chaining predetermined routines.
     public Func<NpcRoutine>? NextRoutine { get; init; }
 
-    protected NpcRoutine(FieldNpc npc, short sequenceId) {
+    protected NpcRoutine(FieldNpc npc) {
         Npc = npc;
+    }
 
-        Npc.SequenceId = sequenceId;
+    /// <summary>
+    /// Attempts to play an animation via AnimationManager and claims it in MovementState
+    /// so the watchdog does not immediately override it.
+    /// </summary>
+    protected bool PlayAnimation(AnimationRequest request) {
+        bool played = Npc.Animation.TryPlay(request);
+        if (played) {
+            Npc.MovementState.ClaimAnimation();
+        }
+        return played;
     }
 
     /// <summary>
@@ -30,8 +42,11 @@ public abstract class NpcRoutine {
         }
 
         Completed = true;
-        // Force Idle on completion
-        Npc.SequenceId = Npc.IdleSequenceMetadata.Id;
+        PlayAnimation(new AnimationRequest {
+            SequenceName = Npc.Animation.IdleSequence.Name,
+            Priority = AnimationPriority.Idle,
+            CanInterruptSelf = true,
+        });
         if (Npc.State.State != ActorState.Idle) {
             Npc.State = new NpcState();
         }

@@ -103,7 +103,7 @@ public partial class MovementState {
 
             castMoveLastTick = -1;
         } else {
-            castMoveTick = actor.Animation.GetSequenceSegmentTime(castMoveStartKeyframe, castMoveEndKeyframe);
+            castMoveTick = actor.Animation.GetNormalizedSegmentTime(castMoveStartKeyframe, castMoveEndKeyframe);
 
             if (castMoveFinished) {
                 castMoveTick = 1;

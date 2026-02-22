@@ -1291,7 +1291,7 @@ public class DebugFieldRenderer : IFieldRenderer {
             }
         } else {
             // For players: use ActiveSkills but only if currently in a skill animation
-            if (actor.Animation.Current is { Type: AnimationType.Skill }) {
+            if (actor.Animation.Current is { } current && current.Request.Priority == AnimationPriority.Skill) {
                 skillRecord = actor.ActiveSkills.GetMostRecent();
             }
         }

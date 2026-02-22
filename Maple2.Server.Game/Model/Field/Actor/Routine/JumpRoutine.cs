@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Maple2.Server.Game.Model.State;
 using Maple2.Tools.Extensions;
 
@@ -35,20 +35,20 @@ public class JumpRoutine : NpcRoutine {
 
     private TimeSpan duration;
 
-    private JumpRoutine(FieldNpc npc, short sequenceId, Vector3 endPosition, float duration, float scale) : base(npc, sequenceId) {
+    private JumpRoutine(FieldNpc npc, short sequenceId, Vector3 endPosition, float duration, float scale) : base(npc) {
         this.endPosition = endPosition;
         this.duration = TimeSpan.FromSeconds(duration);
         Npc.State = new StateJumpNpc(Npc.Position, endPosition, duration, scale);
 
-        NextRoutine = () => new WaitRoutine(npc, npc.IdleSequenceMetadata.Id, npc.IdleSequenceMetadata.Time);
+        NextRoutine = () => new WaitRoutine(npc, npc.Animation.IdleSequence.Time);
     }
 
-    private JumpRoutine(FieldNpc npc, short sequenceId, float duration) : base(npc, sequenceId) {
+    private JumpRoutine(FieldNpc npc, short sequenceId, float duration) : base(npc) {
         endPosition = Npc.Position;
         this.duration = TimeSpan.FromSeconds(duration);
         Npc.State = new StateJumpNpc(Npc.Position);
 
-        NextRoutine = () => new WaitRoutine(npc, npc.IdleSequenceMetadata.Id, npc.IdleSequenceMetadata.Time);
+        NextRoutine = () => new WaitRoutine(npc, npc.Animation.IdleSequence.Time);
     }
 
     public override Result Update(TimeSpan elapsed) {

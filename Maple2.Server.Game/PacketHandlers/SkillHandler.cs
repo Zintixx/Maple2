@@ -6,6 +6,7 @@ using Maple2.PacketLib.Tools;
 using Maple2.Server.Core.Constants;
 using Maple2.Server.Core.Packets;
 using Maple2.Server.Game.Model;
+using Maple2.Server.Game.Model.ActorStateComponent;
 using Maple2.Server.Game.Model.Enum;
 using Maple2.Server.Game.Model.Skill;
 using Maple2.Server.Game.PacketHandlers.Field;
@@ -99,7 +100,13 @@ public class SkillHandler : FieldPacketHandler {
         }
 
         SkillMetadataMotionProperty motion = record.Metadata.Data.Motions.First().MotionProperty;
-        session.Animation.TryPlaySequence(motion.SequenceName, motion.SequenceSpeed, AnimationType.Skill, record.Metadata);
+        session.Animation.TryPlay(new AnimationRequest {
+            SequenceName = motion.SequenceName,
+            Speed = motion.SequenceSpeed,
+            Priority = AnimationPriority.Skill,
+            CanInterruptSelf = true,
+            Skill = record.Metadata,
+        });
 
         packet.ReadInt(); // ClientTick
         record.Unknown = packet.ReadBool(); // UnkBool
@@ -379,7 +386,13 @@ public class SkillHandler : FieldPacketHandler {
 
         SkillMetadataMotionProperty motion = record.Metadata.Data.Motions[motionPoint].MotionProperty;
 
-        session.Animation.TryPlaySequence(motion.SequenceName, motion.SequenceSpeed, AnimationType.Skill, record.Metadata);
+        session.Animation.TryPlay(new AnimationRequest {
+            SequenceName = motion.SequenceName,
+            Speed = motion.SequenceSpeed,
+            Priority = AnimationPriority.Skill,
+            CanInterruptSelf = true,
+            Skill = record.Metadata,
+        });
     }
 
     private void HandleTickSync(GameSession session, IByteReader packet) {
@@ -409,7 +422,7 @@ public class SkillHandler : FieldPacketHandler {
             return;
         }
 
-        session.Player.Animation.SetLoopSequence(true, true);
+        session.Animation.ConfirmClientLoop();
     }
 
     private void HandleCancel(GameSession session, IByteReader packet) {
@@ -427,6 +440,6 @@ public class SkillHandler : FieldPacketHandler {
             session.Send(NoticePacket.Message($"Skill.Cancel: {skillUid}"));
         }
 
-        session.Animation.CancelSequence();
+        session.Animation.Cancel();
     }
 }

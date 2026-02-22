@@ -15,11 +15,14 @@ using Maple2.Server.Game.Model.Enum;
 using Maple2.Server.Core.Packets;
 using DotRecast.Detour.Crowd;
 using Maple2.Server.Game.Model.ActorStateComponent;
+using Maple2.Server.Game.Manager;
 using MovementState = Maple2.Server.Game.Model.ActorStateComponent.MovementState;
 
 namespace Maple2.Server.Game.Model;
 
 public class FieldNpc : Actor<Npc> {
+    private readonly NpcAnimationManager npcAnimation;
+    public new NpcAnimationManager Animation => npcAnimation;
     #region Control
     public bool SendControl;
     private long lastUpdate;
@@ -72,10 +75,6 @@ public class FieldNpc : Actor<Npc> {
     );
 
     public readonly AgentNavigation? Navigation;
-    public readonly AnimationSequenceMetadata IdleSequenceMetadata;
-    public readonly AnimationSequenceMetadata? JumpSequence;
-    public readonly AnimationSequenceMetadata? WalkSequence;
-    public readonly AnimationSequenceMetadata? FlySequence;
     public readonly string? SpawnAnimation;
     private readonly WeightedSet<string> defaultRoutines;
     public readonly AiState AiState;
@@ -105,10 +104,8 @@ public class FieldNpc : Actor<Npc> {
     public readonly Dictionary<string, int> AiExtraData = new();
 
     public FieldNpc(FieldManager field, int objectId, DtCrowdAgent? agent, Npc npc, string aiPath, string spawnAnimation = "", string? patrolDataUUID = null) : base(field, objectId, npc, field.NpcMetadata) {
-        IdleSequenceMetadata = npc.Animations.GetValueOrDefault("Idle_A") ?? new AnimationSequenceMetadata(string.Empty, -1, 1f, []);
-        JumpSequence = npc.Animations.GetValueOrDefault("Jump_A") ?? npc.Animations.GetValueOrDefault("Jump_B");
-        WalkSequence = npc.Animations.GetValueOrDefault("Walk_A");
-        FlySequence = npc.Animations.GetValueOrDefault("Fly_A");
+        npcAnimation = new NpcAnimationManager(this);
+        base.Animation = npcAnimation;
         SpawnAnimation = spawnAnimation;
         defaultRoutines = new WeightedSet<string>();
         foreach (NpcAction action in Value.Metadata.Action.Actions) {
@@ -143,7 +140,7 @@ public class FieldNpc : Actor<Npc> {
     protected virtual void Remove(TimeSpan delay) => Field.RemoveNpc(ObjectId, delay);
 
     private List<string> debugMessages = [];
-    private bool playersListeningToDebug = false; // controls whether messages should log
+    private bool playersListeningToDebug = true; // controls whether messages should log
     private long nextDebugPacket = 0;
 
     public override void Update(long tickCount) {
@@ -159,7 +156,7 @@ public class FieldNpc : Actor<Npc> {
         base.Update(tickCount);
 
         // controls whether currently logged messages should print
-        bool playersListeningToDebugNow = false;
+        bool playersListeningToDebugNow = true;
 
         foreach ((int objectId, FieldPlayer player) in Field.Players) {
             if (player.DebugAi) {
@@ -237,10 +234,6 @@ public class FieldNpc : Actor<Npc> {
         }
     }
 
-    public override void KeyframeEvent(string keyName) {
-        MovementState.KeyframeEvent(keyName);
-    }
-
     private NpcTask? NextRoutine(long tickCount) {
         if (Patrol?.WayPoints.Count > 0 && Navigation is not null) {
             return NextWaypoint();
@@ -293,8 +286,8 @@ public class FieldNpc : Actor<Npc> {
         if (currentWaypoint.AirWayPoint) {
             if (Value.Animations.TryGetValue(currentWaypoint.ApproachAnimation, out AnimationSequenceMetadata? patrolSequence)) {
                 approachTask = MovementState.TryFlyTo(currentWaypoint.Position, false, sequence: patrolSequence.Name, speed: (float) Patrol.PatrolSpeed / 2, lookAt: true);
-            } else if (FlySequence is not null) {
-                approachTask = MovementState.TryFlyTo(currentWaypoint.Position, false, sequence: FlySequence.Name, speed: (float) Patrol.PatrolSpeed / 2, lookAt: true);
+            } else if (Animation.FlySequence is not null) {
+                approachTask = MovementState.TryFlyTo(currentWaypoint.Position, false, sequence: Animation.FlySequence.Name, speed: (float) Patrol.PatrolSpeed / 2, lookAt: true);
             } else {
                 Logger.Warning("No walk sequence found for npc {NpcId} in patrol {PatrolId}", Value.Metadata.Id, Patrol.Uuid);
             }
@@ -302,8 +295,8 @@ public class FieldNpc : Actor<Npc> {
             if (Navigation!.PathTo(currentWaypoint.Position)) {
                 if (Value.Animations.TryGetValue(currentWaypoint.ApproachAnimation, out AnimationSequenceMetadata? patrolSequence)) {
                     approachTask = MovementState.TryMoveTo(currentWaypoint.Position, false, sequence: patrolSequence.Name, speed: 1);
-                } else if (WalkSequence is not null) {
-                    approachTask = MovementState.TryMoveTo(currentWaypoint.Position, false, sequence: WalkSequence.Name, speed: 1);
+                } else if (Animation.WalkSequence is not null) {
+                    approachTask = MovementState.TryMoveTo(currentWaypoint.Position, false, sequence: Animation.WalkSequence.Name, speed: 1);
                 } else {
                     Logger.Warning("No walk sequence found for npc {NpcId} in patrol {PatrolId}", Value.Metadata.Id, Patrol.Uuid);
                 }

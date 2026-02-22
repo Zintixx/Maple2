@@ -106,7 +106,7 @@ public sealed partial class GameSession : Core.Network.Session {
     public MarriageManager Marriage { get; set; } = null!;
     public FishingManager Fishing { get; set; } = null!;
     public DungeonManager Dungeon { get; set; } = null!;
-    public AnimationManager Animation { get; set; } = null!;
+    public PlayerAnimationManager Animation { get; set; } = null!;
     public RideManager Ride { get; set; } = null!;
     public MentoringManager Mentoring { get; set; } = null!;
 
@@ -166,7 +166,7 @@ public sealed partial class GameSession : Core.Network.Session {
         }
 
         Player = new FieldPlayer(this, player);
-        Animation = new AnimationManager(this);
+        Animation = new PlayerAnimationManager(this);
         Currency = new CurrencyManager(this);
         Mastery = new MasteryManager(this);
         Stats = new StatsManager(Player, ServerTableMetadata.UserStatTable);

@@ -1,4 +1,6 @@
-﻿using Maple2.Model.Metadata;
+using Maple2.Model.Metadata;
+using Maple2.Server.Game.Model.ActorStateComponent;
+using Maple2.Server.Game.Model.Enum;
 
 namespace Maple2.Server.Game.Model.Routine;
 
@@ -6,7 +8,13 @@ public class AnimateRoutine : NpcRoutine {
     private TimeSpan duration;
     private readonly bool complete = true;
 
-    public AnimateRoutine(FieldNpc npc, AnimationSequenceMetadata sequenceMetadata, float duration = -1f) : base(npc, sequenceMetadata.Id) {
+    public AnimateRoutine(FieldNpc npc, AnimationSequenceMetadata sequenceMetadata, float duration = -1f) : base(npc) {
+        PlayAnimation(new AnimationRequest {
+            SequenceName = sequenceMetadata.Name,
+            Priority = AnimationPriority.Idle,
+            CanInterruptSelf = true,
+        });
+
         if (duration != -1f) {
             this.duration = TimeSpan.FromMilliseconds(duration);
             complete = false;

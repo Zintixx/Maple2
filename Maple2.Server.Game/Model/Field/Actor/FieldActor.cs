@@ -26,7 +26,7 @@ public class FieldActor : Actor<MapMetadata> {
     public Transform Transform { get; init; }
     public BuffManager Buffs { get; }
     public StatsManager Stats { get; }
-    public AnimationManager Animation { get; init; }
+    public new AnimationManager Animation { get; }
     public SkillState SkillState { get; init; }
     public SkillQueue ActiveSkills { get; init; }
 
@@ -36,7 +36,7 @@ public class FieldActor : Actor<MapMetadata> {
         Buffs = new BuffManager(this);
         Transform = new Transform();
         NpcMetadata = npcMetadata;
-        Animation = new AnimationManager(this); // not meant to have animations
+        Animation = new NpcAnimationManager(this);
         SkillState = new SkillState(this);
         ActiveSkills = new SkillQueue();
     }

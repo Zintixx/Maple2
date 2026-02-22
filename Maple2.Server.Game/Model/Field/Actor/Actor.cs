@@ -39,7 +39,7 @@ public abstract class Actor<T> : IActor<T>, IDisposable {
         set => Transform.RotationAnglesDegrees = value;
     }
     public Transform Transform { get; init; }
-    public AnimationManager Animation { get; init; }
+    public AnimationManager Animation { get; protected set; } = null!;
     public SkillState SkillState { get; init; }
 
     public virtual bool IsDead { get; protected set; }
@@ -66,7 +66,6 @@ public abstract class Actor<T> : IActor<T>, IDisposable {
         Buffs = new BuffManager(this);
         Transform = new Transform();
         NpcMetadata = npcMetadata;
-        Animation = new AnimationManager(this);
         SkillState = new SkillState(this);
         Stats = new StatsManager(this);
         PositionTick = new ValueTuple<Vector3, long, long>(Vector3.Zero, 0, 0);
@@ -351,8 +350,6 @@ public abstract class Actor<T> : IActor<T>, IDisposable {
         Animation.Update(tickCount);
         Buffs.Update(tickCount);
     }
-
-    public virtual void KeyframeEvent(string keyName) { }
 
     public virtual SkillRecord? CastSkill(int id, short level, long uid, int castTick, in Vector3 position = default, in Vector3 direction = default, in Vector3 rotation = default, float rotateZ = 0f, byte motionPoint = 0) {
         if (!Field.SkillMetadata.TryGet(id, level, out SkillMetadata? metadata)) {
