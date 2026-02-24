@@ -1427,6 +1427,79 @@ public class ServerTableMapper : TypeMapper<ServerTableMetadata> {
                 return new SaleAutoFishing(
                     Discount: fishingDiscount,
                     ContentType: value2);
+            case GameEventType.Snowman:
+                value1Xml.LoadXml(value1);
+                if (value1Xml.FirstChild is not { Name: "ms2" }) {
+                    return null;
+                }
+                var groups = new List<Snowman.Group>();
+                XmlNode? optionNode = value1Xml.FirstChild.SelectSingleNode("option");
+                string theme = optionNode?.Attributes?["thema"]?.Value ?? string.Empty;
+                foreach (XmlNode groupNode in value1Xml.FirstChild.ChildNodes) {
+                    var conditionNode = groupNode.SelectSingleNode("condition");
+                    if (conditionNode == null) {
+                        continue;
+                    }
+
+                    if (!int.TryParse(conditionNode.Attributes?["snowflakeCount"]?.Value, out int count)) {
+                        continue;
+                    }
+
+                    if (!int.TryParse(conditionNode.Attributes?["dailyMaxCount"]?.Value, out int dailyMaxCount)) {
+                        continue;
+                    }
+
+                    if (!int.TryParse(conditionNode.Attributes?["accumMaxCount"]?.Value, out int accumMaxCount)) {
+                        continue;
+                    }
+
+                    var snowmanRewardItems = new List<RewardItem>();
+                    XmlNodeList? rewardItemNodes = groupNode.SelectNodes("rewardItems/v");
+                    if (rewardItemNodes == null) {
+                        continue;
+                    }
+                    foreach (XmlNode snowmanRewardNode in rewardItemNodes) {
+                        if (!int.TryParse(snowmanRewardNode.Attributes?["itemID"]?.Value, out int snowmanRewardItemId)) {
+                            continue;
+                        }
+
+                        if (!short.TryParse(snowmanRewardNode.Attributes?["grade"]?.Value, out short snowmanRewardGrade)) {
+                            continue;
+                        }
+
+                        if (!int.TryParse(snowmanRewardNode.Attributes?["count"]?.Value, out int snowmanRewardCount)) {
+                            continue;
+                        }
+                        snowmanRewardItems.Add(new RewardItem(snowmanRewardItemId, snowmanRewardGrade, snowmanRewardCount));
+                    }
+
+                    var snowmanAccumRewardItems = new List<RewardItem>();
+                    XmlNodeList? accumRewardItemNodes = groupNode.SelectNodes("accumRewardItems/v");
+                    if (accumRewardItemNodes == null) {
+                        continue;
+                    }
+                    foreach (XmlNode snowmanAccumRewardNode in accumRewardItemNodes) {
+                        if (!int.TryParse(snowmanAccumRewardNode.Attributes?["itemID"]?.Value, out int snowmanAccumRewardItemId)) {
+                            continue;
+                        }
+
+                        if (!short.TryParse(snowmanAccumRewardNode.Attributes?["grade"]?.Value, out short snowmanAccumRewardGrade)) {
+                            continue;
+                        }
+
+                        if (!int.TryParse(snowmanAccumRewardNode.Attributes?["count"]?.Value, out int snowmanAccumRewardCount)) {
+                            continue;
+                        }
+                        snowmanAccumRewardItems.Add(new RewardItem(snowmanAccumRewardItemId, snowmanAccumRewardGrade, snowmanAccumRewardCount));
+                    }
+                    groups.Add(new Snowman.Group(
+                        Condition: new Snowman.Condition(count, dailyMaxCount, accumMaxCount),
+                        Rewards: snowmanRewardItems.ToArray(),
+                        AccumRewards: snowmanAccumRewardItems.ToArray()));
+                }
+                return new Snowman(
+                    Theme: theme,
+                    Groups: groups.ToArray());
             default:
                 return null;
         }

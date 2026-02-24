@@ -245,6 +245,27 @@ public class GameEvent : IByteSerializable {
                 writer.WriteInt();
                 writer.WriteUnicodeString(instrument.ContentType);
                 break;
+            case Snowman snowman:
+                writer.WriteInt(Id);
+                writer.WriteInt(Id);
+                writer.WriteUnicodeString(snowman.Theme);
+                writer.WriteShort((short)snowman.Groups.Length);
+                foreach (Snowman.Group group in snowman.Groups) {
+                    writer.WriteInt(group.Condition.Count);
+                    writer.WriteInt(group.Condition.DailyMaxCount);
+                    writer.WriteInt(group.Condition.AccMaxCount);
+                    writer.WriteShort((short)group.Rewards.Length);
+                    foreach (RewardItem rewardItem in group.Rewards) {
+                        writer.Write<RewardItem>(rewardItem);
+                    }
+                    writer.WriteShort((short)group.AccumRewards.Length);
+                    foreach (RewardItem rewardItem in group.AccumRewards) {
+                        writer.Write<RewardItem>(rewardItem);
+                    }
+                }
+                writer.WriteLong(EndTime);
+                writer.WriteUnicodeString(Metadata.Value2);
+                break;
         }
     }
 }

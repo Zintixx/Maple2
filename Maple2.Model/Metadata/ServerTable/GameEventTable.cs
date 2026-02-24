@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Maple2.Model.Enum;
 using Maple2.Model.Game;
+
 // ReSharper disable InconsistentNaming
 
 namespace Maple2.Model.Metadata;
@@ -111,7 +112,7 @@ public record ActiveUser(
     int MailDaysExpire,
     int Meret,
     int MinLevel
-    ) : GameEventData;
+) : GameEventData;
 
 /// <summary>
 /// Year round event that gives users a mail and an item.
@@ -227,12 +228,10 @@ public record TimeRunEvent(
         int OpeningDay);
 }
 
-
 /// <summary>
 /// Enables Maple Survival (Mushking Royale). Possibly does not work.
 /// </summary>
 public record MapleSurvivalOpenPeriod : GameEventData;
-
 
 /// <summary>
 /// Closes Maple Survival (Mushking Royale)
@@ -262,6 +261,20 @@ public record SaleAutoFishing(
     string ContentType) : GameEventData;
 
 public record LoginNotice : GameEventData;
+
+public record Snowman(
+    string Theme,
+    Snowman.Group[] Groups) : GameEventData {
+    public record Group(
+        Condition Condition,
+        RewardItem[] Rewards,
+        RewardItem[] AccumRewards);
+
+    public record Condition(
+        int Count,
+        int DailyMaxCount,
+        int AccMaxCount);
+}
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "!")]
 [JsonDerivedType(typeof(StringBoard), "StringBoard")]
@@ -296,4 +309,5 @@ public record LoginNotice : GameEventData;
 [JsonDerivedType(typeof(DailyLoginReward), "DailyLoginReward")]
 [JsonDerivedType(typeof(SaleAutoPlayInstrument), "SaleAutoPlayInstrument")]
 [JsonDerivedType(typeof(SaleAutoFishing), "SaleAutoFishing")]
+[JsonDerivedType(typeof(Snowman), "Snowman")]
 public abstract record GameEventData;
